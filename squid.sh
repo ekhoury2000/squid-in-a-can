@@ -122,6 +122,7 @@ squid.start() {
         echo "Squid is already running; use '$SCRIPT_NAME restart' to restart squid"
         return 0
     }
+    rm_squid
     run_squid
     route_packages
     return 0
