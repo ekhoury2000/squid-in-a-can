@@ -1,16 +1,28 @@
+data:
+    build: data
+    #image: busybox:latest
+    #volumes:
+        #- /var/cache/squid3
+    #command: true
+
+base:
+  build: base
+
 squid:
-    build: squid/.
-    environment:
-        - "DISK_CACHE_SIZE=5000"
-        - "MAX_CACHE_OBJECT=1000"
-        # - "SQUID_DIRECTIVES_ONLY=true"
-        # - "SQUID_DIRECTIVES='refresh_pattern . 0 0 1 refresh-ims'"
-    net: "host"
-    ## Uncomment and update /path/to/cache
-    # volumes:
-    #   - /path/to/cache:/var/cache/squid3
+  build: squid
+  environment:
+    DISK_CACHE_SIZE: 8000
+    MAX_CACHE_OBJECT: 1000
+    # SQUID_DIRECTIVES_ONLY: true
+    # SQUID_DIRECTIVES: |
+    #   refresh_pattern . 0 0 1 refresh-ims
+  net: "host"
+  volumes_from:
+    - data
 
 tproxy:
-    build: iptables_docker/.
-    net: "host"
-    privileged: true
+  build: iptables_auto_route
+  net: "host"
+  privileged: true
+  links:
+    - squid
