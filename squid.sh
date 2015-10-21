@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#!/usr/bin/bash
 set -e -u
 
 declare -r SCRIPT_PATH=$(readlink -f $0)
@@ -7,7 +7,7 @@ declare -r SCRIPT_DIR=$(cd $(dirname $SCRIPT_PATH) && pwd)
 
 declare -r SQUID_DATA_CONTAINER=data_squid
 declare -r SQUID_DATA_IMG=squidinacan_data
-declare -r SQUID_CONTAINER=squid_proxy
+declare -r SQUID_CONTAINER=squidinacan_squid_1
 declare -r SQUID_IMG=squidinacan_squid
 
 
@@ -77,12 +77,7 @@ ensure_data_container_exists() {
 
 
 rm_squid() {
-    local squid_container=$(docker ps -qa -f name=$SQUID_CONTAINER |  wc -l)
-    ### no data container create one
-    [[ $squid_container -ne 0 ]] && {
-        execute docker rm -f $SQUID_CONTAINER
-    }
-    return 0
+    docker-compose kill && docker-compose rm --force
 }
 
 is_squid_running() {
@@ -91,10 +86,7 @@ is_squid_running() {
 }
 
 run_squid() {
-    execute docker  run -d \
-        --net host --name $SQUID_CONTAINER \
-        --volumes-from $SQUID_DATA_CONTAINER \
-        $SQUID_IMG
+    execute docker-compose up  -d squid
     until is_squid_running; do
         sleep 0.5s
     done
@@ -106,7 +98,11 @@ route_packages() {
 }
 
 unroute_packages() {
-    execute sudo iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to 3129
+    # remove until the chain is empty
+    while  execute sudo iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to 3129; do
+        :
+    done
+    return 0
 }
 
 
@@ -117,7 +113,7 @@ squid.logs() {
 
 
 squid.start() {
-    ensure_data_container_exists
+#    ensure_data_container_exists
     is_squid_running && {
         echo "Squid is already running; use '$SCRIPT_NAME restart' to restart squid"
         return 0
@@ -129,7 +125,10 @@ squid.start() {
 }
 
 squid.restart() {
-    is_squid_running && rm_squid
+    if is_squid_running; then
+        rm_squid
+        unroute_packages
+    fi
     squid.start
 }
 
@@ -145,7 +144,7 @@ squid.status() {
 squid.stop() {
     is_squid_running || return 0
     echo "Going to stop and remove squid"
-    rm_squid
+    rm_squid || true
     unroute_packages
     return 0
 }
@@ -157,6 +156,7 @@ validate_method() {
 }
 
 main() {
+    cd $SCRIPT_DIR
     local SHOW_USAGE=false
     local DRY_RUN=false
 
