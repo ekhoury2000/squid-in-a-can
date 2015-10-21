@@ -1,4 +1,4 @@
-FROM debian:jessie
+FROM squidinacan_base:latest
 RUN apt-get -q update && apt-get -qy install python squid3
 RUN sed -i "s/^#acl localnet/acl localnet/" /etc/squid3/squid.conf
 RUN sed -i "s/^#http_access allow localnet/http_access allow localnet/" /etc/squid3/squid.conf

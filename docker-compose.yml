@@ -1,10 +1,3 @@
-data:
-    build: data
-    #image: busybox:latest
-    #volumes:
-        #- /var/cache/squid3
-    #command: true
-
 base:
   build: base
 
@@ -17,8 +10,9 @@ squid:
     # SQUID_DIRECTIVES: |
     #   refresh_pattern . 0 0 1 refresh-ims
   net: "host"
-  volumes_from:
-    - data
+  privileged: true
+  volumes:
+    - "./volumes/var/cache/squid3/:/var/cache/squid3"
 
 tproxy:
   build: iptables_auto_route
