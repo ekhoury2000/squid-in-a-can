@@ -19,21 +19,47 @@ will pass along to the corporate proxy.
 
 ## How?
 
+You can use the squid proxy directly via docker and iptables rules, there is
+also a `fig.yml` for convenience to use fig to launch the system. For more
+information on tuning parameters see below.
+
+### Using Docker and iptables directly.
+
+You can manually run these commands
+
+```bash
+docker run --net host -d jpetazzo/squid-in-a-can
+iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to 3129 -w
 ```
-docker run --net host --privileged jpetazzo/squid-in-a-can
+
+After you stop you will need to cleanup the iptables rules:
+```bash
+iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to 3129 -w
 ```
 
 
-Checkout this repository: 
-install fig and docker
+### Using Compose
 
-```
-fig up -d squid && fig run tproxy
+There is a `docker-compose.yml` file to enable launching via [docker compose](https://docs.docker.com/compose/) and a separate container
+which will setup the iptables rules for you. To use this you will need a
+local checkout of this repo and have `docker` and `compose` installed.
+
+> Run the following command in the same directory as the `docker-compose.yml` file:
+
+```bash
+docker-compose up
 ```
 
+### Result
 
 That's it. Now all HTTP requests going through your Docker host will be
 transparently routed through the proxy running in the container.
+
+If you your tproxy instance goes down hard without cleaning up use the following command:
+```
+iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to 3129 -w
+```
+
 
 Note: it will only affect HTTP traffic on port 80.
 
@@ -92,12 +118,21 @@ standard web content it is valuable to increase this size. Use the
 The squid disk cache size can be tuned. use
 `-e DISK_CACHE_SIZE=5000` to set the disk cache size (in MB)
 
+### SQUID_DIRECTIVES_ONLY
+
+The contents of squid.conf will only be what's defined in SQUID_DIRECTIVES
+giving the user full control of squid.
+
+### SQUID_DIRECTIVES
+This will append any contents of the environment variable to squid.conf.
+It is expected that you will use multi-line block quote for the contents.
+
 ### Persistent Cache
 
 Being docker when the instance exits the cached content immediately goes away
 when the instance stops. To avoid this you can use a mounted volume. The cache
 location is `/var/cache/squid3` so if you mount that as a volume you can get
-persistent caching. Use `-v /home/user/persistent_squid_cache:/var/squid3/cache`
+persistent caching. Use `-v /home/user/persistent_squid_cache:/var/cache/squid3`
 in your command line to enable persistent caching.
 
 ## Notes
@@ -105,6 +140,14 @@ in your command line to enable persistent caching.
 Ideas for improvement:
 
 - easy chaining to an upstream proxy
+
+### HTTPS support
+
+It has been asked if this could support HTTPS. HTTPS is designed to prevent
+man-in-the middle attacks, and a transparent proxy is effectively a MITM.
+If you want to use squid for HTTPS proxying transparently you need to setup a
+private CA certificate and push it to all your users so they trust the proxy.
+An example of how to set this up can be found [here](http://roberts.bplaced.net/index.php/linux-guides/centos-6-guides/proxy-server/squid-transparent-proxy-http-https).
 
 
 [CVE-2009-0801]: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-0801
