@@ -31,6 +31,10 @@ redirect_cmd = "iptables -t nat -A PREROUTING -p tcp" \
                " --dport 80 -j REDIRECT --to 3129 -w"
 remove_redirect_cmd = redirect_cmd.replace(' -A ', ' -D ')
 
+redirect_https_cmd = "iptables -t nat -A PREROUTING -p tcp" \
+               " --dport 443 -j REDIRECT --to 3130 -w"
+remove_redirect_https_cmd = redirect_cmd.replace(' -A ', ' -D ')
+
 LOCAL_PORT = 3128
 
 
@@ -51,6 +55,14 @@ class RedirectContext:
         except:
             print("Failed to setup IPTABLES. Did you use --privileged"
                   " if not you need to run [[%s]]" % redirect_cmd)
+            self.setup = False
+        print("Enabling IPtables forwarding: '%s'" % redirect_https_cmd)
+        try:
+            subprocess.check_call(redirect_https_cmd.split())
+            self.setup = True
+        except:
+            print("Failed to setup IPTABLES. Did you use --privileged"
+                  " if not you need to run [[%s]]" % redirect_https_cmd)
             self.setup = False
         return self
 

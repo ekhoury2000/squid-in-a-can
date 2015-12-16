@@ -6,7 +6,7 @@ squid:
   net: "host"
   ## Uncomment and update /path/to/cache
   volumes:
-  - /var/cache/mysquid3:/var/cache/squid3
+  - /var/cache/mysquid3:/var/cache/squid
 
 tproxy:
   build: iptables_docker/.
